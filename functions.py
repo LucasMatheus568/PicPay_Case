@@ -13,9 +13,34 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.feature_selection import mutual_info_classif
 from scipy.stats import ks_2samp
 
 """# Funções"""
+
+def features_corr_mi(X, y, threshold=0.7):
+    corr_matrix = X.corr().abs()
+
+    np.fill_diagonal(corr_matrix.values, 0)
+
+    mi_scores = mutual_info_classif(X, y, random_state=13)
+    mi_series = pd.Series(mi_scores, index=X.columns)
+
+    to_drop = set()
+    columns = X.columns.tolist()
+
+    for i in range(len(columns)):
+        for j in range(i+1, len(columns)):
+            var1 = columns[i]
+            var2 = columns[j]
+            if corr_matrix.loc[var1, var2] > threshold:
+                if mi_series[var1] >= mi_series[var2]:
+                    to_drop.add(var2)
+                else:
+                    to_drop.add(var1)
+
+    selected_vars = [var for var in X.columns if var not in to_drop]
+    return selected_vars
 
 def calculate_psi(expected, actual, bins=10):
     expected, bins = np.histogram(expected, bins=bins, density=True)
@@ -32,4 +57,3 @@ def calculate_ks(y_true, y_pred_prob):
     y_pred_1 = y_pred_prob[y_true == 1]
     ks_stat, _ = ks_2samp(y_pred_0, y_pred_1)
     return ks_stat
-
